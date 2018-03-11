@@ -145,6 +145,7 @@ def write_tree(tree, bitwriter):
 
     write_either(tree)
 
+
 def compress(tree, uncompressed, compressed):
     '''First write the given tree to the stream 'compressed' using the
     write_tree function. Then use the same tree to encode the data
@@ -160,11 +161,31 @@ def compress(tree, uncompressed, compressed):
       compressed: A file stream that will receive the tree description
           and the coded input data.
     '''
-    pass
 
+    bitreader = bitio.BitReader(uncompressed)
+    bitwriter = bitio.BitWriter(compressed)
 
+    write_tree(tree, bitwriter)
 
-if __name__ == "__main__":
+    table = huffman.make_encoding_table(tree)
 
-    f = open("test",mode='r+b')
-    print(huffman.make_encoding_table(read_tree(bitio.BitReader(f))))
+    counter = 0
+
+    while True:
+        try:
+            path = table[bitreader.readbits(8)]
+        except EOFError:
+            bitwriter.writebits(0,2)
+            break
+
+        for p in path:
+            if p:
+                bitwriter.writebit(1)
+            else:
+                bitwriter.writebit(0)
+
+    counter %= 8
+
+    while counter:
+        bitwriter.writebit(0)
+        counter -= 1
