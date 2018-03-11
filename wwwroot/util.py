@@ -24,7 +24,39 @@ def read_tree(bitreader):
     Returns:
       A Huffman tree constructed according to the given description.
     '''
-    pass
+
+    def read_prefix ():
+    	'''
+    	1  - go to read_treeBranch()
+    	01 - go to read_treeLeaf()
+    	00 - go to read_end()
+    	'''
+    	bit = bitreader.readBit()
+
+    	if bit1 == 1:
+    		return read_treeBranch()
+    	else:
+    		bit = bitreader.readBit()
+    		if bit == 1:
+    			return read_treeLeaf()
+    		else:
+    			return read_end()
+
+    	# creates branch, calculates items in each branch
+	    def read_treeBranch():
+	    	return TreeBranch (read_prefix(), read_prefix())
+	    
+	    # creates leaf, contains 8 bit integer
+	    def read_treeLeave():
+	    	return TreeLeaf (bitreader.readBits(8))
+	    
+	    # creates leaf that indicates EOF
+	    def read_end():
+	    	return TreeLeaf (None)
+
+	# start recursion
+	return read_prefix()
+
 
 
 def decode_byte(tree, bitreader):
