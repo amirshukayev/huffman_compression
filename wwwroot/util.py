@@ -82,8 +82,7 @@ def decode_byte(tree, bitreader):
         else:
             return node.value
 
-    r = read_node(tree)
-    return r
+    return read_node(tree)
 
 
 def decompress(compressed, uncompressed):
@@ -122,8 +121,29 @@ def write_tree(tree, bitwriter):
       tree: A Huffman tree.
       bitwriter: An instance of bitio.BitWriter to write the tree to.
     '''
-    pass
 
+    def write_branch (node):
+        bitwriter.writebit(1)
+        write_either (node.left)
+        write_either (node.right)
+
+    def write_leaf (node):
+        bitwriter.writebit(0)
+        if node.value != None:
+            bitwriter.writebit(1)
+            bitwriter.writebits(node.value,8)
+        else:
+            bitwriter.writebit(0)
+
+    def write_either (node):
+        if node == None:
+            return
+        if isinstance(node, huffman.TreeBranch):
+            write_branch(node)
+        else:
+            write_leaf(node)
+
+    write_either(tree)
 
 def compress(tree, uncompressed, compressed):
     '''First write the given tree to the stream 'compressed' using the
