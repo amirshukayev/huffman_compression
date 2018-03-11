@@ -63,7 +63,7 @@ def decode_byte(tree, bitreader):
     """
     Reads bits from the bit reader and traverses the tree from
     the root to a leaf. Once a leaf is reached, bits are no longer read
-    and the value of that leave is returned.
+    and the value of that leaf is returned.
     
     Args:
       bitreader: An instance of bitio.BitReader to read the tree from.
@@ -74,15 +74,16 @@ def decode_byte(tree, bitreader):
     """
 
     def read_node (node):
-        if isInstance(node, TreeBranch):
+        if isinstance(node, huffman.TreeBranch):
             if bitreader.readbit() == 0:
-                read_node(node.left)
+                return read_node(node.left)
             else:
-                read_node(node.right)
+                return read_node(node.right)
         else:
             return node.value
 
-    return read_node(tree)
+    r = read_node(tree)
+    return r
 
 
 def decompress(compressed, uncompressed):
@@ -97,7 +98,17 @@ def decompress(compressed, uncompressed):
           output is written.
 
     '''
-    pass
+    bitreader = bitio.BitReader(compressed)
+    bitwriter = bitio.BitWriter(uncompressed)
+    tree = read_tree(bitreader)
+
+    # while compressed stream has data
+    while True:
+        b = decode_byte(tree, bitreader)
+        if b == None:
+            break
+        else:
+            bitwriter.writebits(b,8)
 
 
 def write_tree(tree, bitwriter):
