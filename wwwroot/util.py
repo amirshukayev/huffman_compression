@@ -75,13 +75,16 @@ def decode_byte(tree, bitreader):
 
     def read_node (node):
         if isinstance(node, huffman.TreeBranch):
+            # read which way to recurse
             if bitreader.readbit() == 0:
                 return read_node(node.left)
             else:
                 return read_node(node.right)
+        # if node is a leaf, return its value
         else:
             return node.value
 
+    # initiate recursion
     return read_node(tree)
 
 
@@ -97,16 +100,21 @@ def decompress(compressed, uncompressed):
           output is written.
 
     '''
+
     bitreader = bitio.BitReader(compressed)
     bitwriter = bitio.BitWriter(uncompressed)
+
+    # read Huffman tree from beginning of file
     tree = read_tree(bitreader)
 
     # while compressed stream has data
     while True:
         b = decode_byte(tree, bitreader)
+        # if we reach the end
         if b == None:
             break
         else:
+            # write decoded bytes
             bitwriter.writebits(b,8)
 
 
@@ -122,27 +130,36 @@ def write_tree(tree, bitwriter):
       bitwriter: An instance of bitio.BitWriter to write the tree to.
     '''
 
+    # write branch prefix, and left and right of branch
     def write_branch (node):
         bitwriter.writebit(1)
         write_either (node.left)
         write_either (node.right)
 
+    # write leaf prefix and value
     def write_leaf (node):
         bitwriter.writebit(0)
         if node.value != None:
             bitwriter.writebit(1)
+            # write value
             bitwriter.writebits(node.value,8)
+        # if it is EOF indicator
         else:
             bitwriter.writebit(0)
 
+    # check whether to write branch or leaf
     def write_either (node):
+        # if nothing on this path
         if node == None:
             return
+        # if branch
         if isinstance(node, huffman.TreeBranch):
             write_branch(node)
+        # if leaf
         else:
             write_leaf(node)
 
+    # start recursion
     write_either(tree)
 
 
@@ -165,27 +182,35 @@ def compress(tree, uncompressed, compressed):
     bitreader = bitio.BitReader(uncompressed)
     bitwriter = bitio.BitWriter(compressed)
 
+    # write tree to the beginning of the file
     write_tree(tree, bitwriter)
 
+    # create encoding table for compressed bits of file using our tree
     table = huffman.make_encoding_table(tree)
 
     counter = 0
 
+    # read from uncompressed stream until done
     while True:
         try:
+            # find path description (tuple) from encoding table
             path = table[bitreader.readbits(8)]
+        # if we have reached the end of the file
         except EOFError:
             bitwriter.writebits(0,2)
             break
 
+        # write the path to the compressed file
         for p in path:
             if p:
                 bitwriter.writebit(1)
             else:
                 bitwriter.writebit(0)
 
+    # find how many bits left to make an even byte
     counter %= 8
 
+    # complete byte with 0s
     while counter:
         bitwriter.writebit(0)
         counter -= 1
